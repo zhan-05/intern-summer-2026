@@ -1,0 +1,304 @@
+{
+  "test_date": "2026-08-24 16:26:49",
+  "environment": {
+    "python_version": "3.14.4 (main, Jun 18 2026, 14:25:02) [GCC 15.2.0]",
+    "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+    "vllm_version": "0.27.1",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": false,
+    "num_threads": 4,
+    "cpu": {
+      "model": "11th Gen Intel(R) Core(TM) i5-1155G7 @ 2.50GHz",
+      "cores_physical": 4,
+      "cores_logical": 8,
+      "freq_mhz": 0.0
+    },
+    "cpu_isa": [
+      "avx2",
+      "avx512",
+      "vnni",
+      "f16c",
+      "sse4_2"
+    ],
+    "system_memory_at_start": {
+      "total_mb": 7831.625,
+      "available_mb": 6830.0546875,
+      "used_mb": 1001.5703125,
+      "percent": 12.8
+    }
+  },
+  "models_tested": [
+    {
+      "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "short_name": "SmolLM2-135M",
+      "tests": {
+        "model_load": {
+          "status": "success",
+          "load_time_sec": 30.4,
+          "process_rss_before_mb": 716.0,
+          "process_rss_after_mb": 1068.4,
+          "process_rss_delta_mb": 352.4,
+          "system_memory_before": {
+            "total_mb": 7831.625,
+            "available_mb": 6830.0546875,
+            "used_mb": 1001.5703125,
+            "percent": 12.8
+          },
+          "system_memory_after": {
+            "total_mb": 7831.625,
+            "available_mb": 2751.4140625,
+            "used_mb": 5080.2109375,
+            "percent": 64.9
+          }
+        },
+        "single_prompt": {
+          "status": "success",
+          "num_prompts": 3,
+          "total_time_sec": 2.336,
+          "total_tokens": 150,
+          "throughput_tokens_per_sec": 64.22,
+          "avg_latency_sec": 0.779,
+          "results": [
+            {
+              "prompt": "Hello, my name is",
+              "generated_text": " Emily, and I'm a senior at the University of Springfield. I'm here to help you plan your summer break.\n\nAs you're aware, summer breaks are a great time to recharge and get back into shape. We'll be focusing on",
+              "num_tokens": 50
+            },
+            {
+              "prompt": "The capital of China is",
+              "generated_text": " Beijing, the largest city in China.\n\nThe capital of France is Paris, the largest city in France.\n\nThe capital of Germany is Berlin, the largest city in Germany.\n\nThe capital of Italy is Rome, the largest city",
+              "num_tokens": 50
+            },
+            {
+              "prompt": "1 + 1 =",
+              "generated_text": " 20.\n\nThe sum of the first 10 natural numbers is 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 = 5",
+              "num_tokens": 50
+            }
+          ]
+        },
+        "batch_processing": {
+          "status": "success",
+          "batch_size": 10,
+          "total_time_sec": 22.67,
+          "total_tokens": 197,
+          "throughput_tokens_per_sec": 8.69,
+          "avg_latency_per_request_sec": 2.267,
+          "sample_outputs": [
+            {
+              "prompt": "Write a short sentence about topic number 0.",
+              "output": "\n\nWhat is the main topic of this essay?",
+              "tokens": 12
+            },
+            {
+              "prompt": "Write a short sentence about topic number 1.",
+              "output": "\n\nAlso, please provide the paragraph that follows.",
+              "tokens": 12
+            },
+            {
+              "prompt": "Write a short sentence about topic number 2.",
+              "output": "",
+              "tokens": 1
+            }
+          ]
+        },
+        "chat_generation": {
+          "status": "success",
+          "num_conversations": 3,
+          "total_time_sec": 3.095,
+          "total_tokens": 110,
+          "throughput_tokens_per_sec": 35.54,
+          "results": [
+            {
+              "conversation": [
+                {
+                  "role": "system",
+                  "content": "You are a helpful assistant."
+                },
+                {
+                  "role": "user",
+                  "content": "What is 2 + 2? Reply with just the number."
+                }
+              ],
+              "response": "Two is a positive integer.",
+              "num_tokens": 7
+            },
+            {
+              "conversation": [
+                {
+                  "role": "user",
+                  "content": "Say hello in Chinese."
+                }
+              ],
+              "response": "景谷英語！Hello, I'm here in Chinese.",
+              "num_tokens": 23
+            },
+            {
+              "conversation": [
+                {
+                  "role": "user",
+                  "content": "Write a haiku about coding."
+                }
+              ],
+              "response": "In the depths of code, a silent thread whispers,\nA code that whispers secrets, a code that whispers truth.\n\nThe code that whispers, a code that whispers,\nA code that whispers, a code that whispers,\n\nA code that whispers, a code that whispers,\nA code that whispers, a code that whispers,\n\nA code that whispers, a code that",
+              "num_tokens": 80
+            }
+          ]
+        },
+        "long_generation": {
+          "status": "success",
+          "prompt": "Once upon a time, in a far away land,",
+          "generated_text": " there lived a kingdom that had grown and changed over time. In this kingdom, there were different types of kingdoms, each with its own unique culture and way of life.\n\nThe most powerful kingdom was called the Kingdom of Eldrid, where magic was the most powerful force. Eldrid was divided into several kingdoms, each with their own unique culture and way of life. Some kingdoms were ruled by powerful warriors, while others were ruled by wise and fair kings. The kingdom of Eldrid had many small kingdoms and villages, each with their own unique culture and way of life.\n\nThe kingdom of Brighthaven was a peaceful kingdom, where magic was used to heal the sick and to bring peace to the land. Brighthaven was divided into five kingdoms, each with its own unique culture and way of life. Some kingdoms were ruled by powerful warriors, while others were ruled by wise and fair kings. The kingdom of Brighthaven had many small kingdoms and villages, each with its own unique culture and way of life.\n\nThe kingdom of Miregal was a small kingdom that was ruled by a wise and fair king. Miregal was divided into two kingdoms, one ruled by a powerful warrior, and another by a wise and fair king. Miregal had many",
+          "num_tokens": 256,
+          "total_time_sec": 8.609,
+          "throughput_tokens_per_sec": 29.74,
+          "avg_time_per_token_ms": 33.63
+        },
+        "final_memory": {
+          "process_rss_mb": 1068.2,
+          "system_memory": {
+            "total_mb": 7831.625,
+            "available_mb": 2584.0234375,
+            "used_mb": 5247.6015625,
+            "percent": 67.0
+          }
+        }
+      }
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+      "short_name": "Qwen2.5-0.5B",
+      "tests": {
+        "model_load": {
+          "status": "success",
+          "load_time_sec": 28.69,
+          "process_rss_before_mb": 1064.2,
+          "process_rss_after_mb": 1433.5,
+          "process_rss_delta_mb": 369.3,
+          "system_memory_before": {
+            "total_mb": 7831.625,
+            "available_mb": 6354.9296875,
+            "used_mb": 1476.6953125,
+            "percent": 18.9
+          },
+          "system_memory_after": {
+            "total_mb": 7831.625,
+            "available_mb": 1353.55078125,
+            "used_mb": 6478.07421875,
+            "percent": 82.7
+          }
+        },
+        "single_prompt": {
+          "status": "success",
+          "num_prompts": 3,
+          "total_time_sec": 5.613,
+          "total_tokens": 128,
+          "throughput_tokens_per_sec": 22.81,
+          "avg_latency_sec": 1.871,
+          "results": [
+            {
+              "prompt": "Hello, my name is",
+              "generated_text": " Alex and I am a 17 year old male. I have been diagnosed with a rare genetic disorder called X-linked recessive. I have been told that I will not be able to have children. I have been told that I will not be",
+              "num_tokens": 50
+            },
+            {
+              "prompt": "The capital of China is",
+              "generated_text": " located in the ___\nA. Northeast region\nB. Northwest region\nC. Southeast region\nD. Southwest region\nAnswer:\n\nSolution: The capital of China is Beijing. Therefore, the correct choice is: B.\n\nThe main reason for the",
+              "num_tokens": 50
+            },
+            {
+              "prompt": "1 + 1 =",
+              "generated_text": " 2\n\\]\n\nSo, the value of \\(a + b + c + d\\) is \\(\\boxed{2}\\).",
+              "num_tokens": 28
+            }
+          ]
+        },
+        "batch_processing": {
+          "status": "success",
+          "batch_size": 10,
+          "total_time_sec": 38.142,
+          "total_tokens": 640,
+          "throughput_tokens_per_sec": 16.78,
+          "avg_latency_per_request_sec": 3.814,
+          "sample_outputs": [
+            {
+              "prompt": "Write a short sentence about topic number 0.",
+              "output": "32 (if it exists).\n\nTopic 0.32 does not exist in the given list of topics. It appears to be a random",
+              "tokens": 64
+            },
+            {
+              "prompt": "Write a short sentence about topic number 1.",
+              "output": "10.\n\nTopic 1.10: The impact of climate change on marine ecosystems.\n\nSentence:\n\nThe impact of climat",
+              "tokens": 64
+            },
+            {
+              "prompt": "Write a short sentence about topic number 2.",
+              "output": " Sentence: \"The cat is sleeping on the sofa.\"\n\nThe sentence is a simple, everyday description of a c",
+              "tokens": 64
+            }
+          ]
+        },
+        "chat_generation": {
+          "status": "success",
+          "num_conversations": 3,
+          "total_time_sec": 3.684,
+          "total_tokens": 28,
+          "throughput_tokens_per_sec": 7.6,
+          "results": [
+            {
+              "conversation": [
+                {
+                  "role": "system",
+                  "content": "You are a helpful assistant."
+                },
+                {
+                  "role": "user",
+                  "content": "What is 2 + 2? Reply with just the number."
+                }
+              ],
+              "response": "4",
+              "num_tokens": 2
+            },
+            {
+              "conversation": [
+                {
+                  "role": "user",
+                  "content": "Say hello in Chinese."
+                }
+              ],
+              "response": "你好，很高兴见到你。",
+              "num_tokens": 7
+            },
+            {
+              "conversation": [
+                {
+                  "role": "user",
+                  "content": "Write a haiku about coding."
+                }
+              ],
+              "response": "Code flows like a river,\nSyntax dances on the screen,\nSyntax flows like a river.",
+              "num_tokens": 19
+            }
+          ]
+        },
+        "long_generation": {
+          "status": "success",
+          "prompt": "Once upon a time, in a far away land,",
+          "generated_text": " there was a boy named James who loved to play in the park. One day, he saw an old oak tree with a pretty red and white cross on its branch. He knew it was the Cross of Honor, the cross that every hero must wear to honor their bravery. James remembered reading about the Cross of Honor in his history book and wanted to wear it. So, he looked around the park and saw a small statue of a brave knight named Helm. James decided to go to Helm's statue and ask him for permission to wear the Cross of Honor. Helm was very kind and gave him permission. \n\nNow, James is a young man and he is learning to be a hero. He is worried that he might not be able to wear the Cross of Honor properly. Can you help James by explaining how he can wear the Cross of Honor properly? Specifically, what are the steps he should follow, and what information should he provide to Helm, if needed?\n\nCertainly! Here are the steps James should follow to wear the Cross of Honor properly, and what information he should provide to Helm:\n\n1. **Choose the Right Time and Place**:\n   - Wear the Cross of Honor at a time when Helm is available, such as when Helm is not working or at a time",
+          "num_tokens": 256,
+          "total_time_sec": 23.704,
+          "throughput_tokens_per_sec": 10.8,
+          "avg_time_per_token_ms": 92.59
+        },
+        "final_memory": {
+          "process_rss_mb": 1417.9,
+          "system_memory": {
+            "total_mb": 7831.625,
+            "available_mb": 1431.80859375,
+            "used_mb": 6399.81640625,
+            "percent": 81.7
+          }
+        }
+      }
+    }
+  ]
+}

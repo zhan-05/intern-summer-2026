@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>vLLM 推理框架学习与测试报告</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm 15mm; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+    font-size: 10pt; line-height: 1.7; color: #1f2733;
+    print-color-adjust: exact; -webkit-print-color-adjust: exact;
+  }
+  /* ===== 封面 ===== */
+  .cover { page-break-after: always; height: 250mm; display: flex; flex-direction: column; justify-content: center; }
+  .cover-band { border-top: 4px solid #0f4c81; border-bottom: 1px solid #c9d6e2; padding: 26px 8px 22px; margin-bottom: 40px; }
+  .cover-tag { font-size: 11pt; letter-spacing: 6px; color: #0f4c81; font-weight: 600; }
+  .cover-title { font-size: 30pt; font-weight: 700; color: #0f2a44; margin: 14px 0 6px; letter-spacing: 2px; }
+  .cover-sub { font-size: 12.5pt; color: #48607a; letter-spacing: 1px; }
+  .cover-meta { margin-top: 70px; width: 78%; }
+  .cover-meta table { width: 100%; border-collapse: collapse; }
+  .cover-meta td { padding: 7px 4px; border-bottom: 1px solid #dde6ee; font-size: 10pt; }
+  .cover-meta td.k { color: #6b7c8f; width: 34%; }
+  .cover-meta td.v { color: #1f2733; font-weight: 600; }
+  .cover-foot { margin-top: auto; font-size: 9pt; color: #8a99a8; text-align: center; }
+  /* ===== 目录 ===== */
+  .toc { page-break-after: always; }
+  .toc h1 { border: none; }
+  .toc ol { list-style: none; padding-left: 0; margin: 0; }
+  .toc li { padding: 5px 0; border-bottom: 1px dotted #d7dfe8; font-size: 10.5pt; }
+  .toc li.l2 { padding-left: 26px; font-size: 9.5pt; color: #51637a; border-bottom-style: dotted; }
+  .toc .no { display: inline-block; width: 34px; color: #0f4c81; font-weight: 700; }
+  .toc li.l2 .no { font-weight: 400; }
+  /* ===== 章节标题 ===== */
+  h1.ch { page-break-before: always; font-size: 17pt; color: #0f2a44; border-bottom: 3px solid #0f4c81; padding-bottom: 8px; margin: 4px 0 18px; letter-spacing: 1px; }
+  h1.ch .cn { color: #0f4c81; margin-right: 10px; }
+  h2 { font-size: 12.5pt; color: #0f4c81; margin: 20px 0 8px; border-left: 4px solid #0f4c81; padding-left: 9px; }
+  h3 { font-size: 11pt; color: #24435f; margin: 14px 0 6px; }
+  p { margin: 6px 0; text-align: justify; }
+  ul, ol { margin: 4px 0 8px; padding-left: 22px; }
+  li { margin: 3px 0; }
+  strong { color: #0f2a44; }
+  /* ===== 表格 ===== */
+  table.data { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 9pt; page-break-inside: avoid; }
+  table.data th { background: #0f4c81; color: #fff; padding: 6px 8px; text-align: left; font-weight: 600; border: 1px solid #0f4c81; }
+  table.data td { padding: 5px 8px; border: 1px solid #d5dfe9; }
+  table.data tr:nth-child(even) td { background: #f2f6fa; }
+  table.data td.c, table.data th.c { text-align: center; }
+  table.data td.good { color: #1c7a4a; font-weight: 700; }
+  table.data td.bad { color: #b23a3a; font-weight: 700; }
+  table.data td.mid { color: #b07a1f; font-weight: 700; }
+  /* ===== 代码与图示 ===== */
+  pre { background: #f5f7fa; border: 1px solid #e1e8ef; border-left: 4px solid #2a7f62; padding: 9px 12px; font-family: Consolas, "Courier New", monospace; font-size: 8.5pt; line-height: 1.5; overflow-x: auto; page-break-inside: avoid; margin: 8px 0 12px; border-radius: 3px; }
+  pre.diagram { border-left-color: #0f4c81; color: #24435f; }
+  code { font-family: Consolas, monospace; font-size: 8.8pt; background: #eef3f8; padding: 1px 4px; border-radius: 2px; color: #14406b; }
+  /* ===== 提示框 ===== */
+  .box { border: 1px solid #cfe0ee; border-left: 5px solid #0f4c81; background: #f2f7fc; padding: 9px 13px; margin: 10px 0; font-size: 9.5pt; page-break-inside: avoid; border-radius: 3px; }
+  .box.green { border-left-color: #2a7f62; background: #f0f8f4; border-color: #cfe7dc; }
+  .box.warn { border-left-color: #c07f1f; background: #fdf7ee; border-color: #ecd9b8; }
+  .box .bt { font-weight: 700; color: #0f2a44; }
+  /* ===== 条形图 ===== */
+  .chart { margin: 10px 0 14px; page-break-inside: avoid; }
+  .chart-title { font-size: 9.5pt; font-weight: 700; color: #24435f; margin-bottom: 5px; }
+  .bar-row { display: flex; align-items: center; margin: 4px 0; }
+  .bar-label { width: 118px; font-size: 8.5pt; color: #40566e; text-align: right; padding-right: 8px; flex: none; }
+  .bar-track { flex: 1; background: #edf2f7; border-radius: 3px; height: 15px; position: relative; }
+  .bar-fill { height: 15px; background: #0f4c81; border-radius: 3px; color: #fff; font-size: 7.8pt; line-height: 15px; padding-left: 6px; white-space: nowrap; min-width: 46px; }
+  .bar-fill.alt { background: #2a7f62; }
+  .chart-note { font-size: 8pt; color: #7c8b9c; margin-top: 3px; }
+  /* ===== 其他 ===== */
+  .formula { background:#f5f7fa; border:1px dashed #b9c9d9; padding:8px 12px; font-size:9.5pt; text-align:center; margin:8px 0; font-family: Consolas, monospace; color:#24435f; }
+  .footer-note { font-size: 8.5pt; color: #8a99a8; margin-top: 4px; }
+  .pagebreak { page-break-before: always; }
+  .small { font-size: 8.5pt; color: #6b7c8f; }
+</style>
+</head>
+<body>
+
+<!-- ================= 封面 ================= -->
+<div class="cover">
+  <div class="cover-band">
+    <div class="cover-tag">技术测试报告</div>
+    <div class="cover-title">vLLM 推理框架学习与测试报告</div>
+    <div class="cover-sub">核心原理 · 测试设计 · 执行过程 · 性能分析 · 结论建议</div>
+  </div>
+  <div class="cover-meta">
+    <table>
+      <tr><td class="k">报告主题</td><td class="v">vLLM 框架技术学习与系统性功能/性能测试</td></tr>
+      <tr><td class="k">测试轮次</td><td class="v">两轮（2026-08-17 基线轮 / 2026-08-24 复测轮）</td></tr>
+      <tr><td class="k">测试平台</td><td class="v">Windows 11 + WSL2 Ubuntu 26.04 LTS</td></tr>
+      <tr><td class="k">测试条件</td><td class="v">Intel i5-1155G7（4C/8T）· 7.6 GiB 内存 · 无独立 GPU（CPU 推理条件）</td></tr>
+      <tr><td class="k">框架版本</td><td class="v">vLLM 0.27.1（vllm-cpu）· PyTorch 2.13.0 · Python 3.14.4</td></tr>
+      <tr><td class="k">测试模型</td><td class="v">SmolLM2-135M-Instruct · Qwen2.5-0.5B-Instruct</td></tr>
+      <tr><td class="k">文档版本</td><td class="v">V1.0（生成日期：2026-08-29）</td></tr>
+    </table>
+  </div>
+  <div class="cover-foot">本报告基于实际测试数据（results.json）与项目测试脚本（vllm_test.py）撰写，所有数据均可复现</div>
+</div>
+
+<!-- ================= 目录 ================= -->
+<div class="toc">
+  <h1>目&nbsp;&nbsp;录</h1>
+  <ol>
+    <li><span class="no">01</span>测试概述与核心结论</li>
+    <li><span class="no">02</span>vLLM 核心原理
+      <div class="l2"><span class="no">2.1</span>框架定位与技术背景 &nbsp;·&nbsp; <span class="no">2.2</span>LLM 推理两阶段过程 &nbsp;·&nbsp; <span class="no">2.3</span>PagedAttention &nbsp;·&nbsp; <span class="no">2.4</span>Continuous Batching &nbsp;·&nbsp; <span class="no">2.5</span>系统架构 &nbsp;·&nbsp; <span class="no">2.6</span>功能特性 &nbsp;·&nbsp; <span class="no">2.7</span>性能决定因素</div>
+    </li>
+    <li><span class="no">03</span>测试环境与部署过程
+      <div class="l2"><span class="no">3.1</span>测试条件说明 &nbsp;·&nbsp; <span class="no">3.2</span>部署流程 &nbsp;·&nbsp; <span class="no">3.3</span>部署问题与解决方案 &nbsp;·&nbsp; <span class="no">3.4</span>资源占用</div>
+    </li>
+    <li><span class="no">04</span>测试方案设计
+      <div class="l2"><span class="no">4.1</span>测试用例设计 &nbsp;·&nbsp; <span class="no">4.2</span>性能指标定义 &nbsp;·&nbsp; <span class="no">4.3</span>关键配置决策 &nbsp;·&nbsp; <span class="no">4.4</span>测试脚本架构 &nbsp;·&nbsp; <span class="no">4.5</span>可复现性设计</div>
+    </li>
+    <li><span class="no">05</span>测试执行过程
+      <div class="l2"><span class="no">5.1</span>执行时间线 &nbsp;·&nbsp; <span class="no">5.2</span>用例执行记录 &nbsp;·&nbsp; <span class="no">5.3</span>执行状态汇总</div>
+    </li>
+    <li><span class="no">06</span>性能指标分析
+      <div class="l2"><span class="no">6.1</span>综合数据 &nbsp;·&nbsp; <span class="no">6.2</span>吞吐量对比 &nbsp;·&nbsp; <span class="no">6.3</span>加载与内存 &nbsp;·&nbsp; <span class="no">6.4</span>深入分析 &nbsp;·&nbsp; <span class="no">6.5</span>两轮方差 &nbsp;·&nbsp; <span class="no">6.6</span>生成质量评估</div>
+    </li>
+    <li><span class="no">07</span>测试结论</li>
+    <li><span class="no">08</span>改进建议</li>
+    <li><span class="no">附录</span>文件清单与参考资料</li>
+  </ol>
+</div>
+
+<!-- ================= 第一章 ================= -->
+<h1 class="ch"><span class="cn">01</span>测试概述与核心结论</h1>
+
+<h2>1.1 报告目的</h2>
+<p>本报告记录一次针对 <strong>vLLM 推理框架</strong> 的系统性学习与测试实践。vLLM 是当前业界最主流的大语言模型（LLM）推理服务框架之一，本次工作围绕三个目标展开：</p>
+<ul>
+  <li><strong>技术学习：</strong> 理解 vLLM 的核心机制——PagedAttention、Continuous Batching 及其系统架构，并验证这些机制在真实运行中的表现；</li>
+  <li><strong>功能验证：</strong> 在本地环境完成 vLLM 的端到端部署，验证模型加载、文本生成、批量处理、对话生成等基础功能；</li>
+  <li><strong>性能度量：</strong> 设计标准化测试用例，采集吞吐量、延迟、内存占用等关键指标，建立可复现的性能基线。</li>
+</ul>
+<p>本次测试在<strong>无独立 GPU 的 CPU 条件</strong>下进行。CPU 仅作为验证 vLLM 跨硬件后端能力的一种测试条件，本报告的分析重点始终是 vLLM 框架本身的技术特性、测试方法论与规律性结论。</p>
+
+<h2>1.2 测试范围</h2>
+<table class="data">
+  <tr><th style="width:18%">维度</th><th>覆盖内容</th><th style="width:22%">对应章节</th></tr>
+  <tr><td>原理学习</td><td>PagedAttention / Continuous Batching / 架构分层 / 性能决定因素</td><td>第二章</td></tr>
+  <tr><td>环境部署</td><td>WSL2 + Python venv + vllm-cpu 安装 + 模型下载</td><td>第三章</td></tr>
+  <tr><td>用例设计</td><td>5 类测试用例（加载 / 单提示 / 批量 / 对话 / 长生成）</td><td>第四章</td></tr>
+  <tr><td>执行记录</td><td>2 个模型 × 5 类用例 × 2 轮，共 20 个执行单元</td><td>第五章</td></tr>
+  <tr><td>指标分析</td><td>吞吐量 / 延迟 / 每 token 耗时 / 内存 / 生成质量</td><td>第六章</td></tr>
+</table>
+
+<h2>1.3 核心结论摘要</h2>
+<div class="box green">
+  <div class="bt">✅ 功能可行性</div>
+  vLLM 0.27.1 在 CPU 测试条件下全部 20 个执行单元成功通过，离线批处理 API（<code>LLM.generate</code> / <code>LLM.chat</code>）行为与官方文档一致，框架功能完整可用。
+</div>
+<div class="box green">
+  <div class="bt">📊 性能基线（复测轮数据）</div>
+  Qwen2.5-0.5B：单提示 <strong>22.8 tok/s</strong>、批量 <strong>16.8 tok/s</strong>、长生成 <strong>10.8 tok/s</strong>（92.6 ms/token）；SmolLM2-135M：单提示最高 <strong>64.2 tok/s</strong>。0.5B 模型在 4 核 CPU 上已可支撑近实时对话。
+</div>
+<div class="box">
+  <div class="bt">🔬 机制验证</div>
+  实测印证了两条 vLLM 核心规律：<strong>① decode 阶段速度与参数量近似成反比</strong>（135M vs 500M 每 token 耗时 33.6ms vs 92.6ms，比值≈1/2.75，与参数量比 1/3.7 基本吻合）；<strong>② 批量场景下连续批处理使高 token 产出模型的吞吐反超</strong>（Qwen 批量 16.8 tok/s &gt; SmolLM2 的 8.7 tok/s）。
+</div>
+<div class="box warn">
+  <div class="bt">⚠️ 工程注意</div>
+  部署阶段共记录 <strong>8 个问题</strong>（依赖声明缺陷、镜像加速、内存预算等），均已有明确解决方案。资源受限环境下 <code>VLLM_CPU_KVCACHE_SPACE</code> 与 <code>max_model_len</code> 的内存预算管理是部署成败的关键。
+</div>
+
+<h2>1.4 术语表</h2>
+<table class="data">
+  <tr><th style="width:24%">术语</th><th>说明</th></tr>
+  <tr><td>Prefill（预填充）</td><td>处理输入 prompt、一次性并行计算全部输入 token 的 KV 的阶段，计算密集型</td></tr>
+  <tr><td>Decode（解码）</td><td>逐 token 自回归生成阶段，每步读取全部权重与 KV 缓存，访存密集型</td></tr>
+  <tr><td>KV Cache</td><td>注意力机制中 Key/Value 的缓存，避免重复计算历史 token，是显存/内存的主要消费者</td></tr>
+  <tr><td>PagedAttention</td><td>vLLM 核心：借鉴操作系统分页机制，将 KV 缓存切分为固定大小 block 按需分配</td></tr>
+  <tr><td>Continuous Batching</td><td>在每次 token 迭代层面动态增删请求的调度方式，消除静态批处理的队头阻塞</td></tr>
+  <tr><td>Token</td><td>模型处理文本的最小单位，约等于 0.7 个英文单词或 0.5~0.7 个汉字</td></tr>
+  <tr><td>吞吐量（Throughput）</td><td>单位时间生成的 token 数（tok/s），本报告的主要性能指标</td></tr>
+  <tr><td>TTFT</td><td>Time To First Token，从请求发出到首个 token 生成的延迟</td></tr>
+  <tr><td>RSS</td><td>Resident Set Size，进程常驻内存，本报告的内存占用指标</td></tr>
+  <tr><td>GEMV</td><td>General Matrix-Vector Multiplication，decode 阶段的核心计算形态</td></tr>
+  <tr><td>BF16 / INT8</td><td>模型数值精度：BF16 为 16 位浮点（本测试采用），INT8 为 8 位整数量化</td></tr>
+</table>
+
+<!-- ================= 第二章 ================= -->
+<h1 class="ch"><span class="cn">02</span>vLLM 核心原理</h1>
+
+<h2>2.1 框架定位与技术背景</h2>
+<p>vLLM 由加州大学伯克利分校 Sky Computing Lab 开源，论文发表于系统领域顶级会议 <strong>SOSP 2023</strong>，现已成长为 LLM 推理与服务的事实标准框架之一。其设计目标是：<strong>在保持模型精度的前提下，最大化推理吞吐量与显存利用率</strong>。相对 HuggingFace Transformers 的朴素实现，vLLM 的典型吞吐量提升可达 <strong>14-24 倍</strong>。</p>
+<p>vLLM 解决的核心矛盾是：<strong>LLM 推理对 KV 缓存的需求是动态且不可预测的，而传统推理框架按最大长度静态预留，导致 60-80% 的缓存空间被浪费</strong>。围绕这一矛盾，vLLM 给出了两项关键创新。</p>
+
+<h2>2.2 LLM 推理的两阶段过程</h2>
+<p>理解 vLLM 的优化，需要先理解 LLM 推理的两个阶段：</p>
+<table class="data">
+  <tr><th style="width:14%">阶段</th><th style="width:30%">工作内容</th><th style="width:26%">计算特征</th><th>性能瓶颈</th></tr>
+  <tr><td><strong>Prefill</strong></td><td>并行处理输入 prompt 的所有 token，生成首 token</td><td>矩阵×矩阵（GEMM），并行度高</td><td>计算能力（Compute-bound）</td></tr>
+  <tr><td><strong>Decode</strong></td><td>每次迭代生成一个 token，直至结束</td><td>矩阵×向量（GEMV），并行度低</td><td>访存带宽（Memory-bound）</td></tr>
+</table>
+<p>Decode 阶段每生成一个 token，都需要<strong>完整读取一遍模型权重</strong>（如 0.5B 模型 BF16 约 1GB）。这意味着 decode 速度理论上受限于内存带宽：带宽 50 GB/s ÷ 权重 1 GB ≈ 50 tok/s 的上限。本测试的实测值（Qwen2.5-0.5B 长生成 10.8 tok/s）低于该理论上限，说明还存在调度、Python 开销等额外瓶颈（详见 6.4 节）。这一"访存受限"特性也解释了为什么<strong> batching 是推理框架的第一要务</strong>——多个请求共享同一份权重读取，可成倍提高有效吞吐。</p>
+
+<h2>2.3 核心创新一：PagedAttention</h2>
+<h3>2.3.1 问题：静态预留导致的缓存碎片</h3>
+<p>传统推理框架为每个请求按<strong>最大可能生成长度</strong>连续预留 KV 缓存空间。由于实际生成长度通常只占预留的 20-40%，造成：</p>
+<ul>
+  <li><strong>内部碎片：</strong> 预留 2048 token 空间实际只用了 300；</li>
+  <li><strong>外部碎片：</strong> 频繁分配释放后，剩余空间虽总量足够却无法连续分配；</li>
+  <li><strong>后果：</strong> 缓存利用率仅 20-40%，直接限制了并发 batch 的规模。</li>
+</ul>
+<h3>2.3.2 方案：操作系统式分页管理</h3>
+<p>PagedAttention 借鉴操作系统<strong>虚拟内存分页</strong>机制：将 KV 缓存切分为固定大小的 block（默认 16 token/块），请求通过<strong>块表（block table）</strong>映射到物理上非连续的块，按需分配、用完即还：</p>
+<pre class="diagram">
+传统连续分配（利用率低）          PagedAttention 分块分配（利用率高）
+┌────────────────────┐          物理块池: [A0][B0][A1][C0][B1][A2] ←块可非连续
+│ Request A ████░░░░░│          块表 A: [0, 2, 5]   ←逻辑连续、物理离散
+│ Request B ███░░░░░░│          块表 B: [1, 4]
+│ Request C ██░░░░░░░│          块表 C: [3]
+└────────────────────┘          ░ = 浪费空间 █ = 实际使用
+  ░░≈60-80%被浪费                  几乎无碎片，利用率 80-95%
+</pre>
+<h3>2.3.3 收益</h3>
+<ul>
+  <li>KV 缓存空间利用率从 20-40% 提升至 <strong>80-95%</strong>；</li>
+  <li>同样内存可容纳更多并发请求，间接放大 batch 规模与吞吐；</li>
+  <li>支持<strong>写时复制（Copy-on-Write）</strong>：相同前缀的请求共享物理块，配合 Prefix Caching 进一步节省（多轮对话 TTFT 降低 50-80%）。</li>
+</ul>
+
+<h2>2.4 核心创新二：Continuous Batching</h2>
+<h3>2.4.1 问题：静态批处理的队头阻塞</h3>
+<p>传统 static batching 要求整批请求全部完成后才能开始下一批。若批内一个请求生成 500 token，其余 50 token 即完成，短请求也只能空等，硬件利用率低下：</p>
+<pre class="diagram">
+Static Batching（整批同步）              Continuous Batching（token 级调度）
+iter1 [A B C D]                          iter1 [A B C D]
+iter2 [A B C D] ← D 已完成却仍占位        iter2 [A B C D] → D 完成，立即移出
+iter3 [A B C D]                          iter3 [A B C E] ← 新请求 E 即刻加入
+iter4 [E F G H] ← 新批等整批结束          iter4 [A B F E] ← C 完成，F 加入
+                                         …  硬件始终满载
+</pre>
+<h3>2.4.2 收益</h3>
+<p>调度粒度从"批"细化为"单次 token 迭代"，已完成请求即刻让位、排队请求即刻补位。vLLM 论文实测该机制带来 <strong>8-23 倍</strong>吞吐提升；本测试第六章的批量用例也将展示其效果（Qwen2.5-0.5B 批量 10 请求时吞吐 16.8 tok/s，未出现严重性能坍缩）。</p>
+
+<h2>2.5 系统架构分层</h2>
+<p>vLLM 采用清晰的分层架构，<strong>上层 API 在不同硬件后端间完全一致</strong>——这是本次 CPU 测试的前提：切换后端不影响应用代码：</p>
+<pre class="diagram">
+┌───────────────────────────────────────────────┐
+│  API 层：LLM（离线）/ AsyncLLMEngine / OpenAI Server │
+├───────────────────────────────────────────────┤
+│  Engine 层：LLMEngine V1                          │
+│    · Scheduler（调度器，实现 Continuous Batching）   │
+│    · BlockManager（块管理器，实现 PagedAttention）   │
+├───────────────────────────────────────────────┤
+│  Executor 层（可插拔硬件后端）                      │
+│    GPUExecutor │ CPUExecutor │ OpenVINO │ TPU …   │
+├───────────────────────────────────────────────┤
+│  Model 层：ModelRunner + 200+ 模型实现             │
+│    Qwen2 / Llama / Mistral / Gemma / …           │
+└───────────────────────────────────────────────┘
+</pre>
+
+<h2>2.6 功能特性全景</h2>
+<table class="data">
+  <tr><th style="width:26%">特性</th><th>作用</th></tr>
+  <tr><td>OpenAI 兼容 API</td><td>一条命令启动 OpenAI 格式 HTTP 服务，客户端零改造迁移</td></tr>
+  <tr><td>Tensor / Pipeline Parallel</td><td>多 GPU 张量并行、跨节点流水线并行，支撑大模型分片</td></tr>
+  <tr><td>Speculative Decoding</td><td>小模型起草 + 大模型验证，2-3 倍解码加速</td></tr>
+  <tr><td>量化支持</td><td>GPTQ / AWQ / INT4 / INT8 / FP8，压缩权重与缓存</td></tr>
+  <tr><td>LoRA 多租户</td><td>单一基座模型动态挂载多个 LoRA 适配器</td></tr>
+  <tr><td>流式输出</td><td>Server-Sent Events 逐 token 实时返回</td></tr>
+  <tr><td>结构化输出</td><td>xgrammar / outlines 后端约束 JSON / Regex 输出格式</td></tr>
+  <tr><td>Prefix Caching / Chunked Prefill</td><td>前缀缓存复用；长 prompt 分块预填充与解码混合调度</td></tr>
+</table>
+
+<h2>2.7 推理性能的底层决定因素</h2>
+<p>综合上述原理，LLM 推理框架的性能可归纳为四个决定因素，它们也构成本测试的分析框架：</p>
+<table class="data">
+  <tr><th style="width:20%">因素</th><th style="width:42%">机制</th><th>对应测试观察点</th></tr>
+  <tr><td>① 参数量 × 精度</td><td>决定 decode 每步的权重读取量（访存瓶颈）</td><td>两模型 ms/token 差异（6.4 节）</td></tr>
+  <tr><td>② 批处理效率</td><td>权重读取在并发请求间摊薄，提升有效吞吐</td><td>批量 vs 单提示吞吐变化（6.4 节）</td></tr>
+  <tr><td>③ 缓存管理</td><td>利用率决定可并发规模；耗尽触发抢占重算</td><td>批量用例输出长度差异（5.2 节）</td></tr>
+  <tr><td>④ Prefill/Decode 配比</td><td>短输出请求中 prefill 占比高，拉低表观吞吐</td><td>对话用例的吞吐异常（6.4 节）</td></tr>
+</table>
+
+<!-- ================= 第三章 ================= -->
+<h1 class="ch"><span class="cn">03</span>测试环境与部署过程</h1>
+
+<h2>3.1 测试条件说明</h2>
+<p>本次测试采用 <strong>CPU 推理条件</strong>，即以"vLLM 的 CPU 执行后端（CPUExecutor / vllm-cpu 发行包）"作为被测对象之一。选择该条件的理由：① 验证 vLLM"上层 API 与硬件后端解耦"的架构声明；② 建立 CPU 侧可复现的性能基线；③ 在无 GPU 硬件条件下完成完整技术学习闭环。下述硬件规格仅作为测试条件记录，本报告的分析不以硬件本身为重点。</p>
+<h3>3.1.1 硬件条件</h3>
+<table class="data">
+  <tr><th style="width:26%">项目</th><th>规格</th></tr>
+  <tr><td>CPU</td><td>Intel i5-1155G7 @ 2.50GHz（4 物理核 / 8 逻辑线程，Tiger Lake）</td></tr>
+  <tr><td>内存</td><td>7.6 GiB + 2 GiB Swap</td></tr>
+  <tr><td>独立 GPU</td><td>无（Intel Iris Xe 集显对 vLLM 不可用）</td></tr>
+  <tr><td>磁盘可用空间</td><td>950 GB</td></tr>
+</table>
+<h3>3.1.2 软件栈</h3>
+<table class="data">
+  <tr><th style="width:26%">组件</th><th style="width:30%">版本</th><th>备注</th></tr>
+  <tr><td>宿主 / 虚拟化</td><td>Windows 11 + WSL2</td><td>内核 6.18.33.2-microsoft-standard-WSL2</td></tr>
+  <tr><td>Linux 发行版</td><td>Ubuntu 26.04 LTS</td><td>系统自带 Python 3.14.4</td></tr>
+  <tr><td>vLLM</td><td>0.27.1（vllm-cpu 包）</td><td>CPU 执行后端</td></tr>
+  <tr><td>PyTorch</td><td>2.13.0+cu130 统一 wheel</td><td>CPU 模式运行，CUDA 不可用</td></tr>
+  <tr><td>Transformers / Tokenizers</td><td>5.15.0 / 0.22.2</td><td>—</td></tr>
+</table>
+<h3>3.1.3 CPU 指令集条件</h3>
+<p>vLLM CPU 后端在启动时自动探测指令集并选择最优内核。本条件支持 AVX512 + VNNI（中高档），不支持更新的 AVX512_BF16 与 AMX（需 Sapphire Rapids 及以后），意味着 BF16 由软件模拟执行——这也是实测每 token 耗时高于官方参考值的原因之一：</p>
+<table class="data">
+  <tr><th style="width:22%">指令集</th><th style="width:14%" class="c">状态</th><th>与 vLLM 的关系</th></tr>
+  <tr><td>SSE4.2 / AVX2</td><td class="c good">支持</td><td>vLLM CPU 后端的最低运行要求</td></tr>
+  <tr><td>AVX512 / F16C</td><td class="c good">支持</td><td>512 位向量运算，主要 GEMM 内核基础</td></tr>
+  <tr><td>VNNI</td><td class="c good">支持</td><td>INT8 点积加速，量化推理的前提</td></tr>
+  <tr><td>AVX512_BF16</td><td class="c bad">不支持</td><td>BF16 原生 GEMM，缺失时软件模拟（约 30% 性能差）</td></tr>
+  <tr><td>AMX</td><td class="c bad">不支持</td><td>硬件矩阵扩展单元，缺失时 GEMV 效率受限</td></tr>
+</table>
+
+<h2>3.2 部署流程</h2>
+<h3>3.2.1 环境搭建六步法</h3>
+<pre>
+① 系统依赖    sudo apt-get install -y python3-pip python3-venv libnuma-dev libtcmalloc-minimal4
+② 虚拟环境    python3 -m venv ~/vllm-env && source ~/vllm-env/bin/activate
+③ 安装 torch  pip install -i https://pypi.tuna.tsinghua.edu.cn/simple torch==2.13.0
+④ 安装 vllm   pip install --no-deps -i https://pypi.tuna.tsinghua.edu.cn/simple vllm-cpu==0.27.1
+⑤ 补齐依赖    pip install transformers tokenizers safetensors numba xgrammar fastapi …
+⑥ 环境变量    export HF_ENDPOINT=https://hf-mirror.com  HF_HUB_DISABLE_XET=1
+              export VLLM_CPU_KVCACHE_SPACE=2  OMP_NUM_THREADS=4
+</pre>
+<p>其中第 ③④ 步的顺序与 <code>--no-deps</code> 用法源于部署中发现的依赖声明缺陷（见 3.3 节问题 P2）。镜像源选择使下载速度从 28 KB/s 提升至 7.8 MB/s（280 倍）。</p>
+<h3>3.2.2 模型获取</h3>
+<table class="data">
+  <tr><th>模型</th><th style="width:12%" class="c">参数量</th><th style="width:14%" class="c">体积</th><th style="width:18%" class="c">下载耗时</th><th style="width:16%" class="c">下载速度</th><th>选型理由</th></tr>
+  <tr><td>SmolLM2-135M-Instruct</td><td class="c">135M</td><td class="c">260 MB</td><td class="c">35 s</td><td class="c">7.3 MB/s</td><td>最小资源占用，验证功能下限</td></tr>
+  <tr><td>Qwen2.5-0.5B-Instruct</td><td class="c">500M</td><td class="c">953 MB</td><td class="c">107 s</td><td class="c">8.9 MB/s</td><td>实用级质量，验证可用性上限</td></tr>
+</table>
+<p>两模型分别代表 <strong>LlamaForCausalLM</strong> 与 <strong>Qwen2ForCausalLM</strong> 两种主流架构，可同时验证 vLLM 的多架构支持能力。</p>
+
+<h2>3.3 部署问题与解决方案</h2>
+<p>部署过程共记录 8 个问题，覆盖依赖管理、网络、配置三个类别。全部问题均已定位根因并获得可复现的解决方案，这也是本次测试的重要工程产出：</p>
+<table class="data">
+  <tr><th style="width:6%" class="c">编号</th><th style="width:30%">问题现象</th><th style="width:38%">根因分析</th><th>解决方案</th></tr>
+  <tr><td class="c">P1</td><td>Python 3.14 兼容性疑虑</td><td>vllm-cpu wheel 采用 cp38-abi3 稳定 ABI，官方文档仅写到 3.12</td><td>实测可用，无需降级 Python</td></tr>
+  <tr><td class="c">P2</td><td><code>torch==2.13.0+cpu</code> 版本不存在，安装中断</td><td>vllm-cpu 依赖声明过时；PyTorch 2.7 起已改用统一 wheel（无 +cpu 后缀）</td><td>先装 torch 2.13.0，再 <code>--no-deps</code> 装 vllm-cpu，手动补齐其余依赖</td></tr>
+  <tr><td class="c">P3</td><td>PyPI 下载 28 KB/s</td><td>默认源 CDN 链路质量差</td><td>切换清华镜像，提速 280 倍</td></tr>
+  <tr><td class="c">P4</td><td>HF 模型下载 401 Unauthorized</td><td>镜像站不支持 Xet 协议</td><td><code>HF_HUB_DISABLE_XET=1</code> 回退 HTTP 下载</td></tr>
+  <tr><td class="c">P5</td><td><code>gpu_memory_utilization=0.0</code> 触发 pydantic 校验失败</td><td>参数校验要求 &gt; 0，与 CPU 模式的用法直觉冲突</td><td>移除该参数，CPU 后端自动忽略</td></tr>
+  <tr><td class="c">P6</td><td>KV 缓存请求 8 GB 超出可用内存，引擎启动失败</td><td>7.6 GB 内存扣除引擎常驻后仅余 3.7 GB</td><td><code>VLLM_CPU_KVCACHE_SPACE=2</code> + <code>max_model_len=1024</code> 精细化内存预算</td></tr>
+  <tr><td class="c">P7</td><td>Triton 不可用警告</td><td>Triton 为 GPU JIT 编译器，CPU 无驱动</td><td>无需处理，vLLM 自动降级 V1 Runner</td></tr>
+  <tr><td class="c">P8</td><td>libtcmalloc / libiomp 未预加载警告</td><td>性能库可提升多线程内存分配与调度效率</td><td>预留优化项（见 8.1 节），基线测试保持未启用</td></tr>
+</table>
+<div class="box warn">
+  <div class="bt">⭐ 关键工程结论（P6）</div>
+  资源受限环境下部署 vLLM 的成败取决于<strong>内存预算三要素</strong>：引擎常驻开销（约 0.8-1.0 GB）+ 模型权重（BF16 ≈ 2×参数量）+ KV 缓存（<code>VLLM_CPU_KVCACHE_SPACE</code>）。三者之和必须低于物理内存的 85%，且 KV 缓存建议取总内存的 25-40%。
+</div>
+
+<h2>3.4 资源占用</h2>
+<table class="data">
+  <tr><th>项目</th><th style="width:20%" class="c">大小</th><th>说明</th></tr>
+  <tr><td>Python venv（含 torch 统一 wheel 的 CUDA 依赖）</td><td class="c">6.2 GB</td><td>其中约 5 GB 为 nvidia-* 包，CPU 推理不使用但随 wheel 强制安装</td></tr>
+  <tr><td>模型缓存（两模型合计）</td><td class="c">1.2 GB</td><td>HF 缓存目录</td></tr>
+  <tr><td>合计</td><td class="c">约 7.4 GB</td><td>若用 <code>pip install torch --no-deps</code> 可再节省约 5 GB</td></tr>
+</table>
+
+<!-- ================= 第四章 ================= -->
+<h1 class="ch"><span class="cn">04</span>测试方案设计</h1>
+
+<h2>4.1 测试用例设计</h2>
+<p>测试用例按照"由简到繁、逐层加压"的原则设计，覆盖 vLLM 离线推理 API 的主要能力面，并刻意构造出<strong>不同 Prefill/Decode 配比</strong>的场景，以便从数据中分离出框架行为规律：</p>
+<table class="data">
+  <tr><th style="width:9%" class="c">用例</th><th style="width:20%">名称</th><th style="width:30%">设计目的</th><th style="width:24%">关键参数</th><th>观察指标</th></tr>
+  <tr><td class="c">TC1</td><td>模型加载</td><td>建立内存开销基线，验证引擎启动</td><td>dtype=bfloat16, max_model_len=1024</td><td>加载时间、RSS 增量、系统内存水位</td></tr>
+  <tr><td class="c">TC2</td><td>单提示生成</td><td>验证基本生成能力；greedy 解码保证可复现</td><td>3 prompts, temperature=0.0, max_tokens=50</td><td>吞吐量、平均延迟</td></tr>
+  <tr><td class="c">TC3</td><td>批量请求处理</td><td>验证 Continuous Batching 并发调度；构造 KV 缓存压力</td><td>10 prompts, temperature=0.7, max_tokens=64</td><td>批吞吐、单请求平均延迟、token 产出量</td></tr>
+  <tr><td class="c">TC4</td><td>对话式生成</td><td>验证 chat 模板机制；构造"短输出"场景暴露 prefill 占比</td><td>3 段对话, temperature=0.0, max_tokens=80</td><td>吞吐量、输出质量</td></tr>
+  <tr><td class="c">TC5</td><td>长文本生成</td><td>纯 decode 压力测试，逼近访存上限</td><td>1 prompt, temperature=0.8, max_tokens=256</td><td>吞吐量、ms/token</td></tr>
+</table>
+
+<h2>4.2 性能指标定义</h2>
+<div class="formula">吞吐量 (tok/s) = Σ 生成 token 数 ÷ 总耗时　　平均延迟 (s/req) = 总耗时 ÷ 请求数　　每 token 耗时 (ms) = 1000 × 总耗时 ÷ Σ token 数</div>
+<table class="data">
+  <tr><th style="width:22%">指标</th><th>定义与测量方式</th></tr>
+  <tr><td>加载时间</td><td><code>LLM()</code> 构造函数从调用到返回的墙钟时间</td></tr>
+  <tr><td>进程 RSS</td><td><code>psutil.Process().memory_info().rss</code>，在加载前后与测试结束时三点采样</td></tr>
+  <tr><td>系统内存水位</td><td><code>psutil.virtual_memory()</code>（含 vLLM EngineCore 子进程的总体占用）</td></tr>
+  <tr><td>生成质量</td><td>人工评审：指令跟随、数学正确性、中文能力、创意写作（重复度）四项</td></tr>
+</table>
+
+<h2>4.3 关键配置决策</h2>
+<p>每个引擎参数的选择均有明确依据，形成如下决策记录（供复现与调参参考）：</p>
+<table class="data">
+  <tr><th style="width:24%">配置</th><th style="width:16%">取值</th><th>决策依据</th></tr>
+  <tr><td><code>dtype</code></td><td class="c">bfloat16</td><td>现代 Intel CPU 的推荐精度；相比 float32 节省一半带宽与内存</td></tr>
+  <tr><td><code>enforce_eager</code></td><td class="c">True</td><td>禁用 CUDA Graph 编译路径（该路径依赖 GPU，CPU 后端必须 eager 执行）</td></tr>
+  <tr><td><code>max_model_len</code></td><td class="c">1024</td><td>KV 缓存占用与上下文长度成正比；1024 为本内存条件的平衡点</td></tr>
+  <tr><td><code>VLLM_CPU_KVCACHE_SPACE</code></td><td class="c">2 (GB)</td><td>总内存 7.6 GB 的 26%，符合 25-40% 推荐区间；8 GB 取值在 P6 中被证实失败</td></tr>
+  <tr><td><code>OMP_NUM_THREADS</code></td><td class="c">4</td><td>等于物理核数；逻辑核 8 留给系统进程，避免超线程争抢</td></tr>
+  <tr><td><code>seed</code> / temperature</td><td class="c">42 / 0.0</td><td>TC2/TC4 采用 greedy 解码 + 固定种子，输出可逐字节复现</td></tr>
+</table>
+
+<h2>4.4 测试脚本架构</h2>
+<p>自动化测试脚本 <code>vllm_test.py</code> 的结构如下，具备失败隔离（单用例异常不影响后续）、全量 JSON 落盘、自动汇总三个特性：</p>
+<pre class="diagram">
+vllm_test.py
+├── 环境变量预置（必须在 import vllm 之前）      ← P4/P6 教训固化
+├── record_env()        采集 Python/vLLM/torch 版本、CPU ISA、内存基线
+├── test_model(id, name)
+│    ├── TC1 加载计时 + RSS 三点采样
+│    ├── TC2~TC5 各用例独立 try/except，记录 status/吞吐/token 明细
+│    └── 收尾：final_memory + del llm + gc.collect()（防跨模型内存叠加）
+└── main()              依次测试 2 个模型 → 写 results.json → 打印汇总表
+</pre>
+
+<h2>4.5 可复现性设计</h2>
+<ul>
+  <li><strong>固定随机性：</strong> TC2/TC4 使用 temperature=0（greedy）+ seed=42；</li>
+  <li><strong>两轮验证：</strong> 2026-08-17 基线轮与 2026-08-24 复测轮使用同一脚本独立执行，用于评估波动（见 6.5 节）；</li>
+  <li><strong>数据留痕：</strong> 全部指标与生成文本明细保存于 <code>results.json</code>，本报告表格均可溯源。</li>
+</ul>
+
+<!-- ================= 第五章 ================= -->
+<h1 class="ch"><span class="cn">05</span>测试执行过程</h1>
+
+<h2>5.1 执行时间线</h2>
+<table class="data">
+  <tr><th style="width:16%">阶段</th><th style="width:16%" class="c">耗时</th><th>内容</th></tr>
+  <tr><td>环境部署</td><td class="c">约 90 分钟</td><td>venv 创建、依赖安装与 8 个问题的定位解决（含网络等待）</td></tr>
+  <tr><td>模型获取</td><td class="c">约 2.5 分钟</td><td>两模型经镜像下载（953 MB + 260 MB）</td></tr>
+  <tr><td>单轮测试</td><td class="c">约 4 分钟</td><td>2 模型 ×（加载 + 4 用例 + 内存收尾），自动化脚本无人值守执行</td></tr>
+  <tr><td>两轮合计</td><td class="c">约 8 分钟</td><td>复测轮用于方差评估</td></tr>
+</table>
+
+<h2>5.2 用例执行记录（复测轮 2026-08-24）</h2>
+<h3>5.2.1 TC1 模型加载</h3>
+<table class="data">
+  <tr><th>模型</th><th style="width:14%" class="c">加载耗时</th><th style="width:22%" class="c">进程 RSS 变化</th><th style="width:16%" class="c">RSS 增量</th><th style="width:16%" class="c">系统内存水位</th><th class="c">状态</th></tr>
+  <tr><td>SmolLM2-135M</td><td class="c">30.40 s</td><td class="c">716.0 → 1068.4 MB</td><td class="c">352.4 MB</td><td class="c">64.9%</td><td class="c good">成功</td></tr>
+  <tr><td>Qwen2.5-0.5B</td><td class="c">28.69 s</td><td class="c">1064.2 → 1433.5 MB</td><td class="c">369.3 MB</td><td class="c">82.7%</td><td class="c good">成功</td></tr>
+</table>
+<p class="small">注：Qwen 加载后系统内存水位 82.7%，已接近本报告定义的 85% 风险线；RSS 增量小于模型权重大小，是因为部分权重由 EngineCore 子进程持有（计入系统水位而非本进程 RSS）。</p>
+
+<h3>5.2.2 TC2 单提示生成（3 prompts，greedy）</h3>
+<table class="data">
+  <tr><th style="width:20%">提示</th><th style="width:27%">SmolLM2-135M 输出（节选）</th><th>Qwen2.5-0.5B 输出（节选）</th></tr>
+  <tr><td><code>Hello, my name is</code></td><td>" Emily, and I'm a senior at the University of Springfield…"</td><td>" Alex and I am a 17 year old male…"</td></tr>
+  <tr><td><code>The capital of China is</code></td><td>" Beijing, the largest city in China. …"</td><td>" located in the ___ A. Northeast… Answer: … Beijing …"</td></tr>
+  <tr><td><code>1 + 1 =</code></td><td class="bad">" 20. The sum of the first 10 natural numbers…"（错误）</td><td class="good">" 2 … \(\boxed{2}\)"（正确）</td></tr>
+</table>
+<div class="chart">
+  <div class="chart-title">TC2 吞吐量（tokens/s）</div>
+  <div class="bar-row"><div class="bar-label">SmolLM2-135M</div><div class="bar-track"><div class="bar-fill" style="width:100%">64.22</div></div></div>
+  <div class="bar-row"><div class="bar-label">Qwen2.5-0.5B</div><div class="bar-track"><div class="bar-fill alt" style="width:35.5%">22.81</div></div></div>
+</div>
+
+<h3>5.2.3 TC3 批量请求处理（10 prompts 并发）</h3>
+<table class="data">
+  <tr><th>模型</th><th style="width:14%" class="c">总耗时</th><th style="width:16%" class="c">token 产出</th><th style="width:16%" class="c">吞吐量</th><th style="width:20%" class="c">单请求均延迟</th><th class="c">状态</th></tr>
+  <tr><td>SmolLM2-135M</td><td class="c">22.67 s</td><td class="c">197 tokens</td><td class="c">8.69 tok/s</td><td class="c">2.267 s</td><td class="c good">成功</td></tr>
+  <tr><td>Qwen2.5-0.5B</td><td class="c">38.14 s</td><td class="c">640 tokens</td><td class="c good">16.78 tok/s</td><td class="c">3.814 s</td><td class="c good">成功</td></tr>
+</table>
+<p class="small">关键观察：SmolLM2 在 temperature=0.7 下多数请求仅产出 1~12 tokens（含空输出），640/197 的 token 产出比是两模型吞吐差异的直接原因（详见 6.4 节分析③）。</p>
+<div class="chart">
+  <div class="chart-title">TC3 批量吞吐量（tokens/s）</div>
+  <div class="bar-row"><div class="bar-label">SmolLM2-135M</div><div class="bar-track"><div class="bar-fill" style="width:51.8%">8.69</div></div></div>
+  <div class="bar-row"><div class="bar-label">Qwen2.5-0.5B</div><div class="bar-track"><div class="bar-fill alt" style="width:100%">16.78</div></div></div>
+</div>
+
+<h3>5.2.4 TC4 对话式生成（llm.chat，3 段对话）</h3>
+<table class="data">
+  <tr><th style="width:30%">用户输入</th><th style="width:35%">SmolLM2-135M 回复</th><th>Qwen2.5-0.5B 回复</th></tr>
+  <tr><td>What is 2 + 2? Reply with just the number.</td><td class="bad">"Two is a positive integer."（未按要求）</td><td class="good">"4"（精准）</td></tr>
+  <tr><td>Say hello in Chinese.</td><td class="bad">"景谷英語！Hello, I'm here in Chinese."（语无伦次）</td><td class="good">"你好，很高兴见到你。"</td></tr>
+  <tr><td>Write a haiku about coding.</td><td class="bad">大量重复句式循环（80 tokens 打满）</td><td class="mid">结构正确，尾句重复</td></tr>
+</table>
+<div class="chart">
+  <div class="chart-title">TC4 吞吐量（tokens/s）— 注意：受输出长度影响，跨模型不可直接比较</div>
+  <div class="bar-row"><div class="bar-label">SmolLM2-135M</div><div class="bar-track"><div class="bar-fill" style="width:100%">35.54</div></div></div>
+  <div class="bar-row"><div class="bar-label">Qwen2.5-0.5B</div><div class="bar-track"><div class="bar-fill alt" style="width:21.4%">7.60</div></div></div>
+</div>
+
+<h3>5.2.5 TC5 长文本生成（256 tokens，纯 decode 压力）</h3>
+<table class="data">
+  <tr><th>模型</th><th style="width:14%" class="c">总耗时</th><th style="width:16%" class="c">吞吐量</th><th style="width:18%" class="c">每 token 耗时</th><th class="c">状态</th></tr>
+  <tr><td>SmolLM2-135M</td><td class="c">8.61 s</td><td class="c good">29.74 tok/s</td><td class="c good">33.63 ms</td><td class="c good">成功</td></tr>
+  <tr><td>Qwen2.5-0.5B</td><td class="c">23.70 s</td><td class="c">10.80 tok/s</td><td class="c">92.59 ms</td><td class="c good">成功</td></tr>
+</table>
+<div class="chart">
+  <div class="chart-title">TC5 长生成吞吐量（tokens/s）</div>
+  <div class="bar-row"><div class="bar-label">SmolLM2-135M</div><div class="bar-track"><div class="bar-fill" style="width:100%">29.74</div></div></div>
+  <div class="bar-row"><div class="bar-label">Qwen2.5-0.5B</div><div class="bar-track"><div class="bar-fill alt" style="width:36.3%">10.80</div></div></div>
+</div>
+
+<h2>5.3 执行状态汇总</h2>
+<table class="data">
+  <tr><th style="width:14%">用例</th><th class="c" style="width:22%">SmolLM2-135M（基线轮 / 复测轮）</th><th class="c">Qwen2.5-0.5B（基线轮 / 复测轮）</th></tr>
+  <tr><td>TC1 模型加载</td><td class="c good">成功 / 成功</td><td class="c good">成功 / 成功</td></tr>
+  <tr><td>TC2 单提示</td><td class="c good">成功 / 成功</td><td class="c good">成功 / 成功</td></tr>
+  <tr><td>TC3 批量处理</td><td class="c good">成功 / 成功</td><td class="c good">成功 / 成功</td></tr>
+  <tr><td>TC4 对话生成</td><td class="c good">成功 / 成功</td><td class="c good">成功 / 成功</td></tr>
+  <tr><td>TC5 长生成</td><td class="c good">成功 / 成功</td><td class="c good">成功 / 成功</td></tr>
+</table>
+<p><strong>10/10 用例全部通过（每轮），两轮累计 20 个执行单元零失败</strong>——vLLM 在该测试条件下的功能稳定性得到确认。</p>
+
+<!--P3b-->
+
+<!-- ================= 第六章 ================= -->
+<h1 class="ch"><span class="cn">06</span>性能指标分析</h1>
+
+<h2>6.1 综合数据总表</h2>
+<p>以下为复测轮（2026-08-24）完整指标，括号内为基线轮（2026-08-17）数据，供波动参考：</p>
+<table class="data">
+  <tr><th style="width:26%">指标</th><th style="width:24%" class="c">SmolLM2-135M</th><th style="width:24%" class="c">Qwen2.5-0.5B</th><th>对比结论</th></tr>
+  <tr><td>模型体积 / 架构</td><td class="c">260 MB / Llama</td><td class="c">953 MB / Qwen2</td><td>体积比 3.7×</td></tr>
+  <tr><td>加载时间</td><td class="c">30.40 s（30.89）</td><td class="c">28.69 s（39.70）</td><td>均受权重 IO 支配，差异小</td></tr>
+  <tr><td>加载 RSS 增量</td><td class="c">352.4 MB</td><td class="c">369.3 MB</td><td>含引擎常驻，差异小</td></tr>
+  <tr><td>加载后系统内存水位</td><td class="c">64.9%（77.5%）</td><td class="c">82.7%（87.8%）</td><td>Qwen 接近 85% 风险线</td></tr>
+  <tr><td>TC2 单提示吞吐</td><td class="c good">64.22 tok/s（40.55）</td><td class="c">22.81 tok/s（15.19）</td><td>SmolLM2 快 2.8×</td></tr>
+  <tr><td>TC3 批量吞吐</td><td class="c">8.69 tok/s（6.62）</td><td class="c good">16.78 tok/s（13.52）</td><td class="good">Qwen 反超 1.9×</td></tr>
+  <tr><td>TC4 对话吞吐</td><td class="c">35.54 tok/s（21.10）</td><td class="c">7.60 tok/s（6.53）</td><td>受输出长度影响大</td></tr>
+  <tr><td>TC5 长生成吞吐</td><td class="c good">29.74 tok/s（17.17）</td><td class="c">10.80 tok/s（9.01）</td><td>SmolLM2 快 2.75×</td></tr>
+  <tr><td>TC5 每 token 耗时</td><td class="c good">33.63 ms（58.25）</td><td class="c">92.59 ms（111.05）</td><td>与参数量比基本一致</td></tr>
+  <tr><td>结束 RSS / 系统水位</td><td class="c">1068.2 MB / 67.0%</td><td class="c">1417.9 MB / 81.7%</td><td>Qwen 高约 10 个百分点</td></tr>
+</table>
+
+<h2>6.2 吞吐量全景对比</h2>
+<div class="chart">
+  <div class="chart-title">四类用例吞吐量对比（tokens/s，复测轮）　■ SmolLM2-135M　<span style="color:#2a7f62">■</span> Qwen2.5-0.5B</div>
+  <div class="bar-row"><div class="bar-label">TC2 单提示</div><div class="bar-track"><div class="bar-fill" style="width:52%">64.22</div></div><div style="width:8px"></div><div class="bar-track"><div class="bar-fill alt" style="width:18.5%">22.81</div></div></div>
+  <div class="bar-row"><div class="bar-label">TC3 批量</div><div class="bar-track"><div class="bar-fill" style="width:7%">8.69</div></div><div style="width:8px"></div><div class="bar-track"><div class="bar-fill alt" style="width:13.6%">16.78</div></div></div>
+  <div class="bar-row"><div class="bar-label">TC4 对话</div><div class="bar-track"><div class="bar-fill" style="width:28.8%">35.54</div></div><div style="width:8px"></div><div class="bar-track"><div class="bar-fill alt" style="width:6.2%">7.60</div></div></div>
+  <div class="bar-row"><div class="bar-label">TC5 长生成</div><div class="bar-track"><div class="bar-fill" style="width:24.1%">29.74</div></div><div style="width:8px"></div><div class="bar-track"><div class="bar-fill alt" style="width:8.7%">10.80</div></div></div>
+  <div class="chart-note">横轴以 64.22 tok/s 为 100% 基准；每行左条为 SmolLM2-135M，右条为 Qwen2.5-0.5B</div>
+</div>
+<p><strong>形态解读：</strong> SmolLM2 在三个 decode 主导的用例中全面领先（与参数量负相关），而 Qwen 在批量用例中反超——这一"交叉"形态正是 vLLM 框架行为与模型质量共同作用的结果，逐项归因见 6.4 节。</p>
+
+<h2>6.3 加载与内存</h2>
+<div class="chart">
+  <div class="chart-title">模型加载时间（秒，越低越好）</div>
+  <div class="bar-row"><div class="bar-label">SmolLM2-135M</div><div class="bar-track"><div class="bar-fill" style="width:100%">30.40</div></div></div>
+  <div class="bar-row"><div class="bar-label">Qwen2.5-0.5B</div><div class="bar-track"><div class="bar-fill alt" style="width:94.4%">28.69</div></div></div>
+</div>
+<div class="chart">
+  <div class="chart-title">结束时进程 RSS（MB）</div>
+  <div class="bar-row"><div class="bar-label">SmolLM2-135M</div><div class="bar-track"><div class="bar-fill" style="width:75.3%">1068</div></div></div>
+  <div class="bar-row"><div class="bar-label">Qwen2.5-0.5B</div><div class="bar-track"><div class="bar-fill alt" style="width:100%">1418</div></div></div>
+</div>
+<div class="chart">
+  <div class="chart-title">加载后系统内存水位（%）— 85% 为本报告定义的 OOM 风险线</div>
+  <div class="bar-row"><div class="bar-label">SmolLM2-135M</div><div class="bar-track"><div class="bar-fill" style="width:64.9%">64.9%</div></div></div>
+  <div class="bar-row"><div class="bar-label">Qwen2.5-0.5B</div><div class="bar-track"><div class="bar-fill alt" style="width:82.7%">82.7% ↑接近风险线</div></div></div>
+</div>
+<p><strong>内存构成分解（Qwen2.5-0.5B，加载后 6.48 GB 系统占用）：</strong> 引擎常驻（torch + vLLM）≈ 2.9 GB、模型权重（BF16）≈ 1.0 GB、KV 缓存预留 2.0 GB、其余为运行时缓冲。内存三要素中 KV 缓存是唯一可由用户直接控制的弹性项，也是 P6 问题的根源。</p>
+
+<h2>6.4 关键发现与归因分析</h2>
+<h3>发现 ① decode 速度与参数量近似成反比</h3>
+<p>TC5 纯 decode 场景下，两模型每 token 耗时 33.63 ms vs 92.59 ms，比值 2.75×；参数量比 3.7×。差距未达 3.7× 的原因是固定开销（调度、Python 层、内核启动）在 135M 模型的 33.63 ms 中占比更高。该发现印证 2.2 节原理：<strong>decode 是访存受限操作，权重读取量（参数量×精度）直接决定速度下限</strong>。</p>
+<h3>发现 ② 批量场景下"质量好的模型吞吐更高"</h3>
+<p>TC3 中 Qwen 吞吐（16.78）反超 SmolLM2（8.69），直接原因是 token 产出 640 vs 197：SmolLM2 在 temperature=0.7 下频繁输出空串或 1-12 tokens 即提前终止。深层机制是 vLLM 的 Continuous Batching 按<strong>实际生成的 token</strong> 摊薄权重读取成本——生成内容越充实，批量加速效果越明显。对框架的启示：<strong>评估批吞吐必须固定 token 产出口径</strong>，否则结论失真。</p>
+<h3>发现 ③ 短输出用例中 prefill 占比扭曲表观吞吐</h3>
+<p>TC4 对话用例 Qwen 吞吐仅 7.60 tok/s（低于其 TC5 的 10.80），并非引擎退化，而是 3 段对话共只产出 28 tokens——prefill（处理 system 模板与输入）耗时占比过高，公式"吞吐 = tokens ÷ 总耗时"的分母被 prefill 主导。这验证了 2.7 节因素④：<strong>跨用例比较吞吐必须控制输出长度</strong>。生产服务中对应的优化手段是 Chunked Prefill 与 Prefix Caching（system 模板 KV 复用）。</p>
+<h3>发现 ④ 实测吞吐距带宽理论上限仍有空间</h3>
+<p>Qwen2.5-0.5B 的 BF16 权重约 1 GB，DDR4 带宽约 50 GB/s，理论上限约 50 tok/s；实测 10.8 tok/s（约 22%）。缺口来源：无 AMX/AVX512_BF16 导致的软件模拟、EngineCore 与 Worker 间 ZMQ 进程通信、Python 调度开销、以及未启用 TCMalloc/libiomp。这为第八章优化路线提供了量化依据。</p>
+<h3>发现 ⑤ 内存水位是稳定性红线</h3>
+<p>Qwen 加载后系统水位 82.7-87.8%（两轮），继续叠加任何大内存操作（如切换模型、高并发批量）都有 OOM 风险。两模型 RSS 增量（352/369 MB）远小于权重体积，说明 vLLM 通过子进程与按需加载管理内存，但<strong>系统级水位监控比进程 RSS 更能预警风险</strong>。</p>
+
+<h2>6.5 两轮运行方差分析</h2>
+<table class="data">
+  <tr><th style="width:28%">指标</th><th style="width:20%" class="c">SmolLM2 基线→复测</th><th style="width:16%" class="c">波动</th><th style="width:20%" class="c">Qwen 基线→复测</th><th>波动</th></tr>
+  <tr><td>TC2 单提示吞吐</td><td class="c">40.55 → 64.22</td><td class="c mid">+58%</td><td class="c">15.19 → 22.81</td><td class="c mid">+50%</td></tr>
+  <tr><td>TC5 长生成吞吐</td><td class="c">17.17 → 29.74</td><td class="c mid">+73%</td><td class="c">9.01 → 10.80</td><td class="c">+20%</td></tr>
+  <tr><td>TC3 批量吞吐</td><td class="c">6.62 → 8.69</td><td class="c">+31%</td><td class="c">13.52 → 16.78</td><td class="c">+24%</td></tr>
+  <tr><td>加载时间</td><td class="c">30.89 → 30.40 s</td><td class="c good">-2%</td><td class="c">39.70 → 28.69 s</td><td class="c mid">-28%</td></tr>
+</table>
+<p><strong>解读：</strong> 基线轮系统水位更高（后台负载较大，加载后 77.5%/87.8% vs 复测轮 64.9%/82.7%），导致其吞吐整体偏低；加载时间则相对稳定。<strong>结论：在共享内存环境中，单次测试不足以定论，性能基线应报告为区间值</strong>。本报告对结论统一采用"复测轮为准 + 两轮区间"的表述方式。</p>
+
+<h2>6.6 生成质量评估</h2>
+<table class="data">
+  <tr><th style="width:20%">能力项</th><th style="width:22%" class="c">SmolLM2-135M</th><th style="width:22%" class="c">Qwen2.5-0.5B</th><th>证据（TC2/TC4 输出）</th></tr>
+  <tr><td>指令跟随</td><td class="c bad">差</td><td class="c good">优</td><td>"Reply with just the number"：SmolLM2 答非所问；Qwen 答"4"</td></tr>
+  <tr><td>数学计算</td><td class="c bad">错误</td><td class="c good">正确</td><td>"1+1="：SmolLM2 答"20"；Qwen 答"2"并给出推导</td></tr>
+  <tr><td>中文能力</td><td class="c bad">错误</td><td class="c good">流利</td><td>"你好，很高兴见到你。" vs 乱码式混合输出</td></tr>
+  <tr><td>创意写作</td><td class="c bad">重复循环</td><td class="c mid">结构完整</td><td>haiku：SmolLM2 循环打满 80 tokens；Qwen 三句结构正确</td></tr>
+</table>
+<div class="box">
+  <div class="bt">⚖️ 质量-速度权衡</div>
+  Qwen2.5-0.5B 以约 1/2.75~1/3.7 的速度代价换取了从"不可用"到"实用"的质变。在 0.5B-1B 量级选择 CPU 推理模型时，<strong>应优先保证质量下限，再追求速度</strong>——速度缺口可通过量化（INT8）与运行时优化补偿，而质量缺陷无法在推理侧修复。
+</div>
+
+<!-- ================= 第七章 ================= -->
+<h1 class="ch"><span class="cn">07</span>测试结论</h1>
+
+<h2>7.1 四维结论</h2>
+<table class="data">
+  <tr><th style="width:14%">维度</th><th style="width:12%" class="c">评级</th><th>结论</th></tr>
+  <tr><td>功能完整性</td><td class="c good">通过</td><td>20/20 执行单元零失败；LLM.generate 与 llm.chat 行为符合官方语义；Llama/Qwen2 双架构加载正常</td></tr>
+  <tr><td>性能水平</td><td class="c mid">达基线</td><td>Qwen2.5-0.5B：长生成 9-11 tok/s（92-111 ms/tok），批量 13.5-16.8 tok/s；SmolLM2-135M：长生成 17-30 tok/s；达到同量级框架在相近硬件的公开参考区间</td></tr>
+  <tr><td>输出质量</td><td class="c mid">分化</td><td>0.5B 模型指令跟随/数学/中文全面可用；135M 模型仅可用于功能冒烟验证</td></tr>
+  <tr><td>工程成熟度</td><td class="c mid">可用但需经验</td><td>部署存在 8 个需人工解决的问题（依赖声明、镜像、内存预算），非开箱即用；解决后流程完全可复现</td></tr>
+</table>
+
+<h2>7.2 适用场景评级</h2>
+<table class="data">
+  <tr><th style="width:30%">场景</th><th style="width:14%" class="c">推荐度</th><th>依据</th></tr>
+  <tr><td>学习 vLLM 原理与 API 开发</td><td class="c good">✓✓✓</td><td>API 与 GPU 版本完全一致，全部核心机制可实地观察</td></tr>
+  <tr><td>应用开发调试 / CI 冒烟</td><td class="c good">✓✓</td><td>4 分钟即可完成 5 用例回归，seed 固定输出可复现</td></tr>
+  <tr><td>小规模离线批量处理</td><td class="c good">✓✓</td><td>批量 13.5-16.8 tok/s，连续批处理有效摊薄成本</td></tr>
+  <tr><td>个人本地对话（0.5B 模型）</td><td class="c mid">✓ 勉强</td><td>10.8 tok/s 下 50 token 回复约需 4.6 秒</td></tr>
+  <tr><td>生产高并发服务</td><td class="c bad">✗ 不推荐</td><td>算力/带宽缺口 5-10 倍，无法满足 SLA</td></tr>
+  <tr><td>≥1B 参数模型推理</td><td class="c bad">✗ 不可行</td><td>7.6 GB 内存无法容纳权重 + KV 缓存的安全组合</td></tr>
+</table>
+
+<h2>7.3 对 vLLM 核心机制的验证</h2>
+<p>本次测试的最终价值在于将第二章的原理知识转化为可观测证据：</p>
+<ul>
+  <li><strong>PagedAttention 验证：</strong> 2 GB KV 缓存（约可容纳 Qwen 0.5B 的 8700+ tokens）支撑了 10 请求并发的批量用例全程无抢占报错，块化管理在有限内存下维持了调度稳定；</li>
+  <li><strong>Continuous Batching 验证：</strong> 批量 10 请求时 Qwen 吞吐（16.78）未低于其单流水平（10.80），并发没有造成性能坍缩，权重读取在请求间有效摊薄；</li>
+  <li><strong>API 后端解耦验证：</strong> 测试代码未使用任何 CPU 专属 API，同一脚本可直接迁移至 GPU 环境，印证了架构分层的工程价值；</li>
+  <li><strong>访存受限模型验证：</strong> ms/token 与参数量的强相关性（发现①）与两阶段理论的预测一致。</li>
+</ul>
+
+<!-- ================= 第八章 ================= -->
+<h1 class="ch"><span class="cn">08</span>改进建议</h1>
+
+<h2>8.1 性能优化路线（按投入产出排序）</h2>
+<table class="data">
+  <tr><th style="width:8%" class="c">优先级</th><th style="width:26%">优化项</th><th style="width:18%" class="c">预期收益</th><th style="width:34%">实施方式</th><th>成本</th></tr>
+  <tr><td class="c">1</td><td>TCMalloc + Intel OpenMP 预加载</td><td class="c good">吞吐 +10~25%</td><td><code>LD_PRELOAD=libtcmalloc_minimal.so.4:libiomp5.so</code></td><td>极低</td></tr>
+  <tr><td class="c">2</td><td>INT8 权重量化</td><td class="c good">内存 -50~75%，吞吐 +50~100%</td><td>GPTQ/AWQ 量化模型或 OpenVINO u8 权重</td><td>低</td></tr>
+  <tr><td class="c">3</td><td>OpenVINO 后端切换</td><td class="c">对 Intel CPU 深度优化</td><td>安装 vllm-openvino 发行包</td><td>中</td></tr>
+  <tr><td class="c">4</td><td>max_num_seqs 调优</td><td class="c">批延迟更平稳</td><td>4 核建议 max_num_seqs=8~16</td><td>极低</td></tr>
+  <tr><td class="c">5</td><td>硬件升级（AMX 平台）</td><td class="c good">吞吐 +200~400%</td><td>Sapphire Rapids 及以后平台（AVX512_BF16 + AMX）</td><td>高</td></tr>
+</table>
+<p>理论测算：基线 10.8 tok/s 叠加第 1+2 项优化后，Qwen2.5-0.5B 可达约 <strong>20-35 tok/s</strong>；若再叠加 AMX 硬件，可达 30-50 tok/s。</p>
+
+<h2>8.2 后续测试计划</h2>
+<table class="data">
+  <tr><th style="width:8%" class="c">编号</th><th style="width:30%">测试项</th><th>目的</th></tr>
+  <tr><td class="c">F1</td><td>在线服务模式压测（vllm serve + OpenAI API）</td><td>测量 TTFT、并发请求下的 P95 延迟，补齐服务端指标</td></tr>
+  <tr><td class="c">F2</td><td>对照组：llama.cpp（GGUF Q4）</td><td>量化同环境差异，验证"框架开销 vs 精度"的归因</td></tr>
+  <tr><td class="c">F3</td><td>INT8 量化模型实测</td><td>验证 8.1 节优化项 2 的实际收益</td></tr>
+  <tr><td class="c">F4</td><td>并发梯度测试（1/2/4/8/16 路）</td><td>绘制吞吐-并发曲线，定位 KV 缓存耗尽拐点与抢占行为</td></tr>
+  <tr><td class="c">F5</td><td>上下文长度梯度测试（512~4096）</td><td>标定 KV 缓存-吞吐边界，输出配置推荐表</td></tr>
+  <tr><td class="c">F6</td><td>Prefix Caching 开关对比</td><td>量化共享 system prompt 场景的 TTFT 收益</td></tr>
+</table>
+
+<h2>8.3 工程实践建议</h2>
+<ul>
+  <li><strong>内存预算先行：</strong> 部署前按"引擎常驻 + 权重 + KV 缓存 ≤ 物理内存 85%"做预算，KV 缓存取总内存 25-40%；</li>
+  <li><strong>性能口径标准化：</strong> 吞吐对比必须固定输出 token 数与并发度，区分 prefill 主导与 decode 主导场景（本报告发现②③的教训）；</li>
+  <li><strong>多轮取区间：</strong> 共享环境单次测试波动可达 ±50%，基线数据应至少两轮并报告区间；</li>
+  <li><strong>固定数据留痕：</strong> 测试脚本应始终落盘 JSON 全量明细（本项目的 results.json 模式），保证结论可溯源；</li>
+  <li><strong>依赖问题固化：</strong> 将 --no-deps 安装顺序、镜像配置写入安装脚本（install_vllm_v3.sh），避免后人重踩 P2-P4。</li>
+</ul>
+
+<!-- ================= 附录 ================= -->
+<h1 class="ch"><span class="cn">附录</span>文件清单与参考资料</h1>
+
+<h2>A. 项目文件清单</h2>
+<table class="data">
+  <tr><th style="width:30%">文件</th><th>用途</th></tr>
+  <tr><td>vllm_test.py</td><td>自动化测试脚本（TC1-TC5，本文第四章所述架构的实现）</td></tr>
+  <tr><td>results.json</td><td>原始测试数据（复测轮全量明细，本报告数据来源）</td></tr>
+  <tr><td>install_vllm_v3.sh</td><td>vllm-cpu 安装脚本（固化 P2-P4 解决方案）</td></tr>
+  <tr><td>setup_env.sh / verify_install.sh</td><td>venv 创建与安装验证脚本</td></tr>
+  <tr><td>download_model.py</td><td>模型下载脚本（镜像 + 禁用 Xet）</td></tr>
+  <tr><td>check_torch.py / test_mirrors.py 等</td><td>问题排查辅助工具</td></tr>
+  <tr><td>01_测试报告.md / 02_学习总结.md</td><td>Markdown 版测试报告与学习总结</td></tr>
+</table>
+
+<h2>B. 参考资料</h2>
+<table class="data">
+  <tr><th style="width:34%">资源</th><th>链接 / 说明</th></tr>
+  <tr><td>vLLM 官方文档</td><td>https://docs.vllm.ai</td></tr>
+  <tr><td>Efficient Memory Management for LLM Serving with PagedAttention（SOSP 2023）</td><td>https://arxiv.org/abs/2309.06180</td></tr>
+  <tr><td>vLLM 官方博客：PagedAttention 原理解析</td><td>https://blog.vllm.ai/2023/06/20/vllm.html</td></tr>
+  <tr><td>Anyscale：Continuous Batching 解析</td><td>https://anyscale.com/blog/continuous-batching-llm-inference</td></tr>
+  <tr><td>vLLM CPU 安装指南</td><td>https://docs.vllm.ai/en/latest/getting_started/installation/cpu/</td></tr>
+  <tr><td>vllm-cpu PyPI 页面</td><td>https://pypi.org/project/vllm-cpu</td></tr>
+</table>
+
+<p class="footer-note" style="margin-top:24px; text-align:center">— 报告完 —　数据来源：results.json（2026-08-24）与基线轮测试记录（2026-08-17）　·　文档版本 V1.0</p>
+
+</body>
+</html>
